@@ -32,6 +32,7 @@ class NotifyNewListingTests(TestCase):
         url, kwargs = mock_post.call_args[0][0], mock_post.call_args[1]
         self.assertEqual(url, 'https://discord.com/api/webhooks/test/test')
         content = kwargs['json']['content']
+        self.assertIn('NEW IN', content)
         self.assertIn('volkswagen golf-3', content)
         self.assertIn('2000', content)
         self.assertIn('1900', content)

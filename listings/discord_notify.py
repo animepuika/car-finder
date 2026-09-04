@@ -13,7 +13,7 @@ def notify_new_listing(listing, warn):
 
     price = f'€{listing.price_eur}' if listing.price_eur is not None else 'price on request'
     year = listing.year or '?'
-    content = f'**{listing.make} {listing.model}** ({year}) - {price}\n{listing.listing_url}'
+    content = f'**NEW IN** - {listing.make} {listing.model} ({year}) - {price}\n{listing.listing_url}'
 
     try:
         response = requests.post(webhook_url, json={'content': content}, timeout=TIMEOUT_SECONDS)
