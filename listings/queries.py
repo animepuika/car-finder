@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from django.db.models import Avg, Count, Max, Min
 from django.utils import timezone
@@ -58,3 +59,24 @@ def listing_stats():
 def tracked_search_summary():
     """Active TrackedSearch rows for a /tracked overview."""
     return list(TrackedSearch.objects.filter(active=True).order_by('make'))
+
+
+def _normalize_model(value):
+    """Strips spaces/hyphens/case so 'Golf 3' and 'golf-3' compare equal.
+    Real data has both forms for the same model - RSS gives display-style
+    ("Tiguan"), backfill derives slug-style from the URL ("tiguan") - so
+    an exact string match would silently miss half the matching rows."""
+    return re.sub(r'[^a-z0-9]', '', value.lower())
+
+
+def find_car(make, model, year=None):
+    """Specific make/model(/year) lookup for a /car query - tolerant of
+    the model-formatting inconsistency above. Returns a list, newest
+    first."""
+    target = _normalize_model(model)
+    qs = CarListing.objects.filter(listing_type=CarListing.FOR_SALE, make=make)
+    if year is not None:
+        qs = qs.filter(year=year)
+    matches = [c for c in qs if _normalize_model(c.model) == target]
+    matches.sort(key=lambda c: c.first_seen_at, reverse=True)
+    return matches

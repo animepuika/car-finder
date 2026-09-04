@@ -2,7 +2,7 @@ import discord
 from asgiref.sync import sync_to_async
 from discord import app_commands
 
-from listings.queries import cars_for_discord, listing_stats, tracked_search_summary
+from listings.queries import cars_for_discord, find_car, listing_stats, tracked_search_summary
 
 MAKE_CHOICES = ['volkswagen', 'skoda', 'audi', 'honda']
 PERIOD_CHOICES = ['today', 'week', 'month']
@@ -71,6 +71,27 @@ def build_client():
             return
 
         content = f'+{remaining} more - see the website for all of them.' if remaining else None
+        await interaction.followup.send(content=content, embeds=[listing_to_embed(c) for c in shown])
+
+    @tree.command(name='car', description='Look up a specific make/model, optionally a specific year')
+    @app_commands.describe(make='Which make', model='Exact model, e.g. "Golf 3"', year='Optional - narrow to one year')
+    @app_commands.choices(make=[app_commands.Choice(name=m, value=m) for m in MAKE_CHOICES])
+    async def car(
+        interaction: discord.Interaction,
+        make: app_commands.Choice[str],
+        model: str,
+        year: int = None,
+    ):
+        await interaction.response.defer()
+
+        results = await sync_to_async(find_car)(make=make.value, model=model, year=year)
+
+        if not results:
+            await interaction.followup.send(f'No {make.value} {model} found{f" from {year}" if year else ""}.')
+            return
+
+        shown = results[:5]
+        content = f'+{len(results) - 5} more matches.' if len(results) > 5 else None
         await interaction.followup.send(content=content, embeds=[listing_to_embed(c) for c in shown])
 
     @tree.command(name='stats', description='Overview of everything currently tracked')

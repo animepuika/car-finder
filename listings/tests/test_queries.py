@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from listings.models import CarListing, TrackedSearch
-from listings.queries import cars_for_discord, listing_stats, tracked_search_summary
+from listings.queries import cars_for_discord, find_car, listing_stats, tracked_search_summary
 
 
 class CarsForDiscordTests(TestCase):
@@ -88,3 +88,39 @@ class TrackedSearchSummaryTests(TestCase):
         summary = tracked_search_summary()
 
         self.assertEqual([ts.make for ts in summary], ['volkswagen'])
+
+
+class FindCarTests(TestCase):
+    def setUp(self):
+        self.tracked = TrackedSearch.objects.create(make='volkswagen', model='')
+
+    def _create(self, model, year=None, url_suffix='a'):
+        return CarListing.objects.create(
+            tracked_search=self.tracked, listing_url=f'https://www.ss.com/msg/{model}-{year}-{url_suffix}.html',
+            make='volkswagen', model=model, year=year, listing_type=CarListing.FOR_SALE,
+        )
+
+    def test_display_style_model_matches_slug_style_query(self):
+        # Real data has both forms for the same model (RSS gives "Tiguan",
+        # backfill derives "tiguan" from the URL) - confirmed by checking
+        # the actual database before building this.
+        self._create('Tiguan', year=2015)
+        results = find_car(make='volkswagen', model='tiguan')
+        self.assertEqual(len(results), 1)
+
+    def test_slug_style_model_matches_display_style_query(self):
+        self._create('golf-3', year=1997)
+        results = find_car(make='volkswagen', model='Golf 3')
+        self.assertEqual(len(results), 1)
+
+    def test_year_narrows_results(self):
+        self._create('golf-3', year=1997, url_suffix='a')
+        self._create('golf-3', year=2000, url_suffix='b')
+        results = find_car(make='volkswagen', model='golf-3', year=1997)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].year, 1997)
+
+    def test_different_model_is_not_matched(self):
+        self._create('Touareg')
+        results = find_car(make='volkswagen', model='Tiguan')
+        self.assertEqual(results, [])
