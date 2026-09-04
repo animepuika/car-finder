@@ -1,0 +1,4 @@
+Django>=5.2,<5.3
+requests>=2.31
+beautifulsoup4>=4.12
+defusedxml>=0.7
