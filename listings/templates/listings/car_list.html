@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Finder</title>
+    <link rel="stylesheet" href="{% static 'listings/style.css' %}">
+</head>
+<body>
+    <header class="page-header">
+        <h1>Car Finder</h1>
+        <p class="subtitle">{{ listings|length }} listing{{ listings|length|pluralize }}</p>
+    </header>
+
+    <form class="filters" method="get">
+        <select name="make" onchange="this.form.submit()">
+            <option value="">All makes</option>
+            {% for ts in tracked_searches %}
+                <option value="{{ ts.make }}" {% if request.GET.make == ts.make %}selected{% endif %}>{{ ts.make }} {{ ts.model }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="price_min" placeholder="Min EUR" value="{{ request.GET.price_min }}">
+        <input type="number" name="price_max" placeholder="Max EUR" value="{{ request.GET.price_max }}">
+        <input type="number" name="year_min" placeholder="Min year" value="{{ request.GET.year_min }}">
+        <input type="number" name="year_max" placeholder="Max year" value="{{ request.GET.year_max }}">
+        <select name="sort" onchange="this.form.submit()">
+            <option value="-first_seen_at" {% if request.GET.sort == '-first_seen_at' %}selected{% endif %}>Newest found</option>
+            <option value="price_eur" {% if request.GET.sort == 'price_eur' %}selected{% endif %}>Price: low to high</option>
+            <option value="-price_eur" {% if request.GET.sort == '-price_eur' %}selected{% endif %}>Price: high to low</option>
+            <option value="-year" {% if request.GET.sort == '-year' %}selected{% endif %}>Newest year</option>
+            <option value="mileage_km" {% if request.GET.sort == 'mileage_km' %}selected{% endif %}>Lowest mileage</option>
+        </select>
+        <button type="submit">Filter</button>
+    </form>
+
+    {% if listings %}
+    <div class="car-grid">
+        {% for car in listings %}
+        <a class="car-card{% if car.probably_sold %} car-card--stale{% endif %}" href="{{ car.listing_url }}" target="_blank" rel="noopener">
+            <div class="car-card__photo">
+                {% if car.primary_photo_url %}
+                    <img src="{{ car.primary_photo_url }}" alt="{{ car.make }} {{ car.model }}" loading="lazy">
+                {% else %}
+                    <div class="car-card__no-photo">No photo</div>
+                {% endif %}
+                {% if car.probably_sold %}<span class="car-card__badge">Probably sold</span>{% endif %}
+            </div>
+            <div class="car-card__body">
+                <h2 class="car-card__title">{{ car.make }} {{ car.model }}{% if car.year %} &middot; {{ car.year }}{% endif %}</h2>
+                <p class="car-card__price">{% if car.price_eur %}€{{ car.price_eur }}{% else %}Price on request{% endif %}</p>
+                <ul class="car-card__specs">
+                    {% if car.mileage_km %}<li>{{ car.mileage_km }} km</li>{% endif %}
+                    {% if car.engine %}<li>{{ car.engine }}</li>{% endif %}
+                    {% if car.transmission %}<li>{{ car.transmission }}</li>{% endif %}
+                    {% if car.body_type %}<li>{{ car.body_type }}</li>{% endif %}
+                    {% if car.color %}<li>{{ car.color }}</li>{% endif %}
+                </ul>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No listings yet.</p>
+        <p>Add a tracked make/model in the <a href="/admin/listings/trackedsearch/">admin</a>, then run <code>fetch_listings</code>.</p>
+    </div>
+    {% endif %}
+</body>
+</html>
