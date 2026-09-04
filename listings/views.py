@@ -1,25 +1,13 @@
-import datetime
-
 from django.shortcuts import render
-from django.utils import timezone
 
-from .models import CarListing, TrackedSearch
+from .models import TrackedSearch
+from .queries import for_sale_listings
 
 ALLOWED_SORTS = {'-first_seen_at', 'price_eur', '-price_eur', 'year', '-year', 'mileage_km'}
-PERIOD_DAYS = {'today': 1, 'week': 7, 'month': 30}
 
 
 def car_list(request):
-    listings = CarListing.objects.filter(listing_type=CarListing.FOR_SALE)
-
-    make = request.GET.get('make')
-    if make:
-        listings = listings.filter(make=make)
-
-    period = request.GET.get('period')
-    if period in PERIOD_DAYS:
-        cutoff = timezone.now() - datetime.timedelta(days=PERIOD_DAYS[period])
-        listings = listings.filter(first_seen_at__gte=cutoff)
+    listings = for_sale_listings(make=request.GET.get('make'), period=request.GET.get('period'))
 
     price_min = request.GET.get('price_min')
     if price_min:
