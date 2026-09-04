@@ -1,6 +1,6 @@
 import time
 
-from listings import ss_client, ss_parser
+from listings import discord_notify, ss_client, ss_parser
 from listings.models import CarListing
 
 REQUEST_DELAY_SECONDS = 1
@@ -42,7 +42,7 @@ def save_new_listing(tracked_search, item, warn):
             if ta_valid_until is None or ta_valid_until < _today():
                 return False
 
-    CarListing.objects.create(
+    listing = CarListing.objects.create(
         tracked_search=tracked_search,
         listing_url=item['listing_url'],
         make=tracked_search.make,
@@ -60,6 +60,10 @@ def save_new_listing(tracked_search, item, warn):
         photo_urls=details.get('photo_urls', []),
         description=details.get('description', ''),
     )
+
+    if is_for_sale:
+        discord_notify.notify_new_listing(listing, warn)
+
     return True
 
 

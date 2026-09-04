@@ -10,10 +10,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import sys
 from pathlib import Path
+
+import dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Never load real secrets (e.g. the Discord webhook URL) during test runs -
+# tests that need one set it explicitly via a mock/override instead, so the
+# test suite can never accidentally hit a real webhook or other live service.
+if 'test' not in sys.argv:
+    dotenv.load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
