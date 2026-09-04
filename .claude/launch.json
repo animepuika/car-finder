@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "car-finder",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "manage.py",
+        "runserver"
+      ],
+      "port": 8000
+    }
+  ]
+}
