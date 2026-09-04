@@ -30,7 +30,7 @@ class CarListing(models.Model):
     make = models.CharField(max_length=50)
     model = models.CharField(max_length=50)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
-    engine = models.CharField(max_length=50, blank=True)
+    engine = models.CharField(max_length=50, null=True, blank=True)
     transmission = models.CharField(max_length=50, blank=True)
     body_type = models.CharField(max_length=50, blank=True)
     color = models.CharField(max_length=50, blank=True)
