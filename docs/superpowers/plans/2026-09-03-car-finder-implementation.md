@@ -23,6 +23,20 @@
 - Only the two verified ss.com mechanisms are used: RSS feeds and the real price-filter POST endpoint (confirmed live during design research). Never follow a link found on a page without confirming it matches one of these - ss.com has at least one honeypot link (`/fDgSeF4*.html` pattern) matching what robots.txt disallows.
 - Do not fetch or store seller phone numbers, VIN codes, or license plates. ss.com gates these behind a JS-driven reveal action specifically (confirmed during design research), and the app has no use for them.
 
+## Progress (as of 2026-09-04)
+
+Tasks 1-7 are complete, committed to git on `master` (working directly on main was explicitly approved by the user - no separate branch), and all tests pass (`manage.py test`). Two real bugs were found and fixed while actually running things, beyond what the plan anticipated:
+
+- `CarListing.engine` needed `null=True` - ss.com listings sometimes omit engine info entirely, and the field was wrongly NOT NULL. See migration `0002_alter_carlisting_engine`.
+- The original test-mocking approach patched `ss_client` inside `fetch_listings.py`'s own module namespace. `listing_sync.py` has its own separate `from listings import ss_client` binding, so that patch never touched it - tests were silently hitting the live ss.com site instead of fixtures (worked, but slow and not actually isolated). Fixed by patching the functions on their source module directly - e.g. `@patch('listings.ss_client.fetch_listing_page')` - which correctly affects every consumer. Use this pattern for any new tests that touch `ss_client`, including Task 6's if it hasn't been done yet by the time you read this.
+
+Remaining:
+
+- **Task 8** (Windows Task Scheduler): not started. Registering the actual scheduled task needs to be confirmed with the user before running `schtasks /create` - don't skip that check, it's called out in the task itself too.
+- **Task 9** (seed real data + end-to-end verification): not started. The previous session hit a tooling issue where its browser-preview pane was bound to a different project's folder from before this project existed, and it couldn't be fixed within that session - hence a fresh session. That should not be a problem here; verify by actually starting the dev server via `preview_start` and looking at the rendered page, not just checking the database.
+
+Local admin login for `/admin/` (development only, not exposed externally): username `admin`, password `carfinder-admin-local`.
+
 ---
 
 ### Task 1: Project scaffold
