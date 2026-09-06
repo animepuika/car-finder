@@ -15,6 +15,7 @@ class NotifyNewListingTests(TestCase):
             tracked_search=tracked, listing_url='https://www.ss.com/msg/a.html',
             make='volkswagen', model='golf-3', year=2000, price_eur=1900,
             listing_type=CarListing.FOR_SALE,
+            photo_urls=['https://i.ss.com/gallery/1/a.jpg'],
         )
         self.warnings = []
 
@@ -23,7 +24,7 @@ class NotifyNewListingTests(TestCase):
 
     @patch.dict(os.environ, {'DISCORD_WEBHOOK_URL': 'https://discord.com/api/webhooks/test/test'})
     @patch('listings.discord_notify.requests.post')
-    def test_posts_make_model_price_and_link(self, mock_post):
+    def test_posts_make_model_price_link_and_photo(self, mock_post):
         mock_post.return_value.raise_for_status.return_value = None
 
         discord_notify.notify_new_listing(self.listing, self._warn)
@@ -34,9 +35,13 @@ class NotifyNewListingTests(TestCase):
         content = kwargs['json']['content']
         self.assertIn('NEW IN', content)
         self.assertIn('volkswagen golf-3', content)
-        self.assertIn('2000', content)
-        self.assertIn('1900', content)
-        self.assertIn('https://www.ss.com/msg/a.html', content)
+
+        embed = kwargs['json']['embeds'][0]
+        self.assertIn('volkswagen golf-3', embed['title'])
+        self.assertIn('2000', embed['title'])
+        self.assertEqual(embed['url'], 'https://www.ss.com/msg/a.html')
+        self.assertIn('1900', embed['description'])
+        self.assertEqual(embed['thumbnail']['url'], 'https://i.ss.com/gallery/1/a.jpg')
         self.assertEqual(self.warnings, [])
 
     @patch.dict(os.environ, {}, clear=True)
