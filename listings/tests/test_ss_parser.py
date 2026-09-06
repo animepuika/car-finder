@@ -74,6 +74,7 @@ class ParseListingDetailTests(SimpleTestCase):
         self.assertEqual(details['body_type'], 'Kabriolets')
         self.assertEqual(details['price_eur'], 1900)
         self.assertEqual(len(details['photo_urls']), 4)
+        self.assertTrue(all(url.endswith('.800.jpg') for url in details['photo_urls']))
         self.assertIn('Pārdodu VW Golf Cabriolet', details['description'])
 
     def test_parses_ta_valid_until_as_last_day_of_month(self):

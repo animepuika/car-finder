@@ -55,7 +55,7 @@ def parse_listing_detail(html_text):
         src = img.get('src', '')
         if src.endswith('.t.jpg') and src not in seen:
             seen.add(src)
-            photo_urls.append(src)
+            photo_urls.append(src[:-len('.t.jpg')] + '.800.jpg')
 
     description_el = soup.select_one('#msg_div_msg')
     description = description_el.get_text('\n', strip=True) if description_el else ''
