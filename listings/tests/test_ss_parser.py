@@ -99,21 +99,35 @@ class ParseListingDetailTests(SimpleTestCase):
         self.assertIsNone(details['price_eur'])
 
 
-class ParseListingUrlsTests(SimpleTestCase):
-    def test_extracts_unique_listing_urls_from_a_results_page(self):
+class ParseListingRowsTests(SimpleTestCase):
+    def setUp(self):
+        self.rows = ss_parser.parse_listing_rows(_read_fixture('vw_list_page.html'))
+
+    def test_extracts_url_and_price_for_each_listing_row_in_order(self):
+        base = 'https://www.ss.com/msg/lv/transport/cars/volkswagen'
+        self.assertEqual(
+            [(row['listing_url'], row['price_eur']) for row in self.rows],
+            [
+                (f'{base}/golf-4/ppmfm.html', 500),
+                (f'{base}/t-cross/cbebkl.html', 13786),
+                (f'{base}/sharan/bdcigo.html', 1390),
+                (f'{base}/golf-5/bcnlgg.html', None),
+                (f'{base}/t4/mfbjg.html', 1600),
+                (f'{base}/golf-6/cboehb.html', 1800),
+                (f'{base}/multivan/gxkop.html', 8490),
+            ],
+        )
+
+    def test_banner_row_without_a_listing_link_is_ignored(self):
+        self.assertEqual(len(self.rows), 7)
+
+    def test_links_outside_the_listing_path_are_ignored(self):
         html_text = '''
-        <html><body>
-        <a href="/msg/lv/transport/cars/skoda/fabia/aaa.html">Fabia</a>
-        <a href="/msg/lv/transport/cars/skoda/octavia/bbb.html">Octavia</a>
-        <a href="/msg/lv/transport/cars/skoda/fabia/aaa.html">Fabia (photo link, same ad)</a>
-        <a href="/lv/transport/cars/skoda/fDgSeF4belM=.html">honeypot, must be ignored</a>
-        </body></html>
+        <table>
+        <tr id="tr_1"><td><a href="/lv/transport/cars/skoda/fDgSeF4belM=.html">honeypot, must be ignored</a></td><td>500  €</td></tr>
+        </table>
         '''
-        urls = ss_parser.parse_listing_urls(html_text)
-        self.assertEqual(urls, [
-            'https://www.ss.com/msg/lv/transport/cars/skoda/fabia/aaa.html',
-            'https://www.ss.com/msg/lv/transport/cars/skoda/octavia/bbb.html',
-        ])
+        self.assertEqual(ss_parser.parse_listing_rows(html_text), [])
 
 
 class ParseModelFromListingUrlTests(SimpleTestCase):

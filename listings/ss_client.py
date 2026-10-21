@@ -21,11 +21,12 @@ def fetch_listing_page(url):
     return response.text
 
 
-def fetch_filtered_page(make, max_price_eur, page=1):
-    url = f'{BASE_URL}/lv/transport/cars/{make}/filter/'
-    data = {'topt[8][min]': 0, 'topt[8][max]': max_price_eur}
-    if page > 1:
-        data['page'] = page
-    response = requests.post(url, data=data, headers={'User-Agent': USER_AGENT}, timeout=TIMEOUT_SECONDS)
+def fetch_for_sale_page(make, page=1):
+    """One page (30 ads, newest first) of a make's for-sale category.
+    ss.com's price filter is session-bound and doesn't apply to a plain
+    HTTP client, so callers filter by price from the parsed rows instead."""
+    suffix = f'page{page}.html' if page > 1 else ''
+    url = f'{BASE_URL}/lv/transport/cars/{make}/sell/{suffix}'
+    response = requests.get(url, headers={'User-Agent': USER_AGENT}, timeout=TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.text

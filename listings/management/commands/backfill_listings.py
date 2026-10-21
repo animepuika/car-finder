@@ -13,6 +13,12 @@ REQUEST_DELAY_SECONDS = 1
 class Command(BaseCommand):
     help = "Pull in already-existing ss.com listings for tracked searches with a price ceiling set"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--pages', type=int, default=1,
+            help='How many pages (30 newest for-sale ads each) to scan per tracked search',
+        )
+
     def handle(self, *args, **options):
         if hasattr(sys.stdout, 'reconfigure'):
             sys.stdout.reconfigure(encoding='utf-8')
@@ -22,22 +28,27 @@ class Command(BaseCommand):
                 self.stdout.write(f'{tracked_search}: skipped, no max_price_eur set')
                 continue
             try:
-                new_count = self._backfill_for_search(tracked_search)
+                new_count = self._backfill_for_search(tracked_search, options['pages'])
                 self.stdout.write(self.style.SUCCESS(f'{tracked_search}: {new_count} new from backfill'))
             except Exception as exc:
                 self.stderr.write(self.style.ERROR(f'Backfill failed for {tracked_search}: {exc}'))
 
-    def _backfill_for_search(self, tracked_search):
-        html = ss_client.fetch_filtered_page(tracked_search.make, tracked_search.max_price_eur)
-        urls = ss_parser.parse_listing_urls(html)
-
+    def _backfill_for_search(self, tracked_search, pages):
         new_count = 0
-        for url in urls:
-            if self._save_listing(tracked_search, url):
-                new_count += 1
+        for page in range(1, pages + 1):
+            rows = ss_parser.parse_listing_rows(ss_client.fetch_for_sale_page(tracked_search.make, page))
+            if not rows:
+                break
+            for row in rows:
+                if self._save_listing(tracked_search, row):
+                    new_count += 1
+            time.sleep(REQUEST_DELAY_SECONDS)
         return new_count
 
-    def _save_listing(self, tracked_search, url):
+    def _save_listing(self, tracked_search, row):
+        url = row['listing_url']
+        if row['price_eur'] is not None and row['price_eur'] > tracked_search.max_price_eur:
+            return False
         if CarListing.objects.filter(listing_url=url).exists():
             return False
 
@@ -51,6 +62,9 @@ class Command(BaseCommand):
             time.sleep(REQUEST_DELAY_SECONDS)
 
         if details['listing_type'] != CarListing.FOR_SALE:
+            return False
+
+        if details['price_eur'] is not None and details['price_eur'] > tracked_search.max_price_eur:
             return False
 
         if tracked_search.require_ta:

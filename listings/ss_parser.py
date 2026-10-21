@@ -75,24 +75,32 @@ def parse_listing_detail(html_text):
     }
 
 
-def parse_listing_urls(html_text):
-    """Extract listing URLs from a category/filtered results page, in
-    document order, deduped. Used by the backfill command. Only matches
-    the real listing-detail path (/msg/lv/transport/cars/...) - ss.com's
-    honeypot links use a different, obfuscated path and are never matched."""
+def parse_listing_rows(html_text):
+    """Extract {'listing_url', 'price_eur'} for each ad row on a category
+    results page, in document order, deduped. Used by the backfill command
+    so it can skip over-ceiling ads without fetching their detail pages.
+    Only matches the real listing-detail path (/msg/lv/transport/cars/...) -
+    ss.com's honeypot links use a different, obfuscated path and are never
+    matched. price_eur is None when the row's price cell shows no amount
+    (the price is always the row's last cell)."""
     soup = BeautifulSoup(html_text, 'html.parser')
-    urls = []
+    rows = []
     seen = set()
-    for a in soup.select('a[href*="/msg/lv/transport/cars/"]'):
-        href = a.get('href', '')
+    for tr in soup.select('tr[id^="tr_"]'):
+        link = tr.select_one('a[href*="/msg/lv/transport/cars/"]')
+        if not link:
+            continue
+        href = link.get('href', '')
         if not href.endswith('.html'):
             continue
         if href.startswith('/'):
             href = SS_BASE_URL + href
-        if href not in seen:
-            seen.add(href)
-            urls.append(href)
-    return urls
+        if href in seen:
+            continue
+        seen.add(href)
+        price_eur, _ = _parse_price(tr.find_all('td')[-1].get_text())
+        rows.append({'listing_url': href, 'price_eur': price_eur})
+    return rows
 
 
 def parse_model_from_listing_url(url):
